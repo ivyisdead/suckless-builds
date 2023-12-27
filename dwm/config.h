@@ -7,21 +7,26 @@ static const unsigned int gappih    = 10;       /* horiz inner gap between windo
 static const unsigned int gappiv    = 10;       /* vert inner gap between windows */
 static const unsigned int gappoh    = 10;       /* horiz outer gap between windows and screen edge */
 static const unsigned int gappov    = 10;       /* vert outer gap between windows and screen edge */
-static const int smartgaps          = 0;        /* 1 means no outer gap when there is only one window */
+static       int smartgaps          = 0;        /* 1 means no outer gap when there is only one window */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
-static const char *fonts[]          = { "Terminus:size=12" };
-static const char dmenufont[]       = "Terminus:size=12";
-//static const char col_gray1[]       = "#40315e";
-static const char col_gray1[]       = "#282a36"; //default #222222
+static const char *fonts[]          = { "monospace:size=10" };
+static const char dmenufont[]       = "monospace:size=10";
+/*static const char col_gray1[]       = "#222222";
 static const char col_gray2[]       = "#444444";
-static const char col_gray3[]       = "#eeeeee"; // inactive fg color #bbb
-static const char col_gray4[]       = "#ffaaff"; // active fg color + title color #eee orig
-static const char col_cyan[]        = "#282a36"; //all
+static const char col_gray3[]       = "#bbbbbb";
+static const char col_gray4[]       = "#eeeeff";
+static const char col_cyan[]        = "#6a90b5";*/
+
+static const char col_blue[]        = "#6a90b5";
+static const char col_red[]         = "#ff0000";
+static const char col_white[]       = "#eeeeff"; 
+static const char col_lightred[]    = "#ff5a5a";
+//static const char col_gray4[]     = "#6a90b5";
 static const char *colors[][3]      = {
-	/*               fg         bg         border   */
-	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
-	[SchemeSel]  = { col_gray4, col_cyan,  col_cyan  },
+	/*               fg            bg         border   */
+	[SchemeNorm] = { col_white,    col_blue,  col_white},
+	[SchemeSel]  = { col_lightred, col_blue,  col_red },
 };
 
 /* tagging */
@@ -34,18 +39,35 @@ static const Rule rules[] = {
 	 */
 	/* class      instance    title       tags mask     isfloating   monitor */
 	{ "Gimp",     NULL,       NULL,       0,            1,           -1 },
+	//{ "Firefox",  NULL,       NULL,       1 << 8,       0,           -1 },
 };
 
 /* layout(s) */
 static const float mfact     = 0.55; /* factor of master area size [0.05..0.95] */
 static const int nmaster     = 1;    /* number of clients in master area */
 static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
+static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
+
+#define FORCE_VSPLIT 1  /* nrowgrid layout: force two clients to always split vertically */
+#include "vanitygaps.c"
 
 static const Layout layouts[] = {
 	/* symbol     arrange function */
 	{ "[]=",      tile },    /* first entry is default */
-	{ "><>",      NULL },    /* no layout function means floating behavior */
 	{ "[M]",      monocle },
+	{ "[@]",      spiral },
+	{ "[\\]",     dwindle },
+	{ "H[]",      deck },
+	{ "TTT",      bstack },
+	{ "===",      bstackhoriz },
+	{ "HHH",      grid },
+	{ "###",      nrowgrid },
+	{ "---",      horizgrid },
+	{ ":::",      gaplessgrid },
+	{ "|M|",      centeredmaster },
+	{ ">M>",      centeredfloatingmaster },
+	{ "><>",      NULL },    /* no layout function means floating behavior */
+	{ NULL,       NULL },
 };
 
 /* key definitions */
@@ -61,13 +83,11 @@ static const Layout layouts[] = {
 
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
+static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_blue, "-nf", col_white, "-sb", col_white, "-sf", col_lightred, NULL };
 static const char *termcmd[]  = { "st", NULL };
-static const char *startupcmd[] = { "/home/ivy/.local/bin/startup.sh", NULL };
 
-static Key keys[] = {
+static const Key keys[] = {
 	/* modifier                     key        function        argument */
-	{ MODKEY,                       XK_p,      spawn,          {.v = startupcmd } },
 	{ MODKEY,                       XK_space,  spawn,          {.v = dmenucmd } },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_u,      togglebar,      {0} },
@@ -77,29 +97,32 @@ static Key keys[] = {
 	{ MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
 	{ MODKEY,                       XK_h,      setmfact,       {.f = -0.05} },
 	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
-	{ MODKEY|Mod1Mask,              XK_h,      incrgaps,       {.i = +1 } },
-	{ MODKEY|Mod1Mask,              XK_l,      incrgaps,       {.i = -1 } },
-	{ MODKEY|Mod1Mask|ShiftMask,    XK_h,      incrogaps,      {.i = +1 } },
-	{ MODKEY|Mod1Mask|ShiftMask,    XK_l,      incrogaps,      {.i = -1 } },
-	{ MODKEY|Mod1Mask|ControlMask,  XK_h,      incrigaps,      {.i = +1 } },
-	{ MODKEY|Mod1Mask|ControlMask,  XK_l,      incrigaps,      {.i = -1 } },
+	{ MODKEY|ShiftMask,             XK_h,      setcfact,       {.f = +0.25} },
+	{ MODKEY|ShiftMask,             XK_l,      setcfact,       {.f = -0.25} },
+	{ MODKEY|ShiftMask,             XK_o,      setcfact,       {.f =  0.00} },
+	{ MODKEY,                       XK_q,      zoom,           {0} },
+	{ MODKEY|Mod1Mask,              XK_u,      incrgaps,       {.i = +1 } },
+	{ MODKEY|Mod1Mask|ShiftMask,    XK_u,      incrgaps,       {.i = -1 } },
+	/*{ MODKEY|Mod1Mask,              XK_i,      incrigaps,      {.i = +1 } },
+	{ MODKEY|Mod1Mask|ShiftMask,    XK_i,      incrigaps,      {.i = -1 } },
+	{ MODKEY|Mod1Mask,              XK_o,      incrogaps,      {.i = +1 } },
+	{ MODKEY|Mod1Mask|ShiftMask,    XK_o,      incrogaps,      {.i = -1 } },
+	{ MODKEY|Mod1Mask,              XK_6,      incrihgaps,     {.i = +1 } },
+	{ MODKEY|Mod1Mask|ShiftMask,    XK_6,      incrihgaps,     {.i = -1 } },
+	{ MODKEY|Mod1Mask,              XK_7,      incrivgaps,     {.i = +1 } },
+	{ MODKEY|Mod1Mask|ShiftMask,    XK_7,      incrivgaps,     {.i = -1 } },
+	{ MODKEY|Mod1Mask,              XK_8,      incrohgaps,     {.i = +1 } },
+	{ MODKEY|Mod1Mask|ShiftMask,    XK_8,      incrohgaps,     {.i = -1 } },
+	{ MODKEY|Mod1Mask,              XK_9,      incrovgaps,     {.i = +1 } },
+	{ MODKEY|Mod1Mask|ShiftMask,    XK_9,      incrovgaps,     {.i = -1 } },*/
 	{ MODKEY|Mod1Mask,              XK_0,      togglegaps,     {0} },
 	{ MODKEY|Mod1Mask|ShiftMask,    XK_0,      defaultgaps,    {0} },
-	{ MODKEY,                       XK_y,      incrihgaps,     {.i = +1 } },
-	{ MODKEY,                       XK_o,      incrihgaps,     {.i = -1 } },
-	{ MODKEY|ControlMask,           XK_y,      incrivgaps,     {.i = +1 } },
-	{ MODKEY|ControlMask,           XK_o,      incrivgaps,     {.i = -1 } },
-	{ MODKEY|Mod4Mask,              XK_y,      incrohgaps,     {.i = +1 } },
-	{ MODKEY|Mod4Mask,              XK_o,      incrohgaps,     {.i = -1 } },
-	{ MODKEY|ShiftMask,             XK_y,      incrovgaps,     {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_o,      incrovgaps,     {.i = -1 } },
-	{ MODKEY,                       XK_q,      zoom,           {0} },
 	{ MODKEY,                       XK_Tab,    view,           {0} },
 	{ MODKEY,                       XK_w,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
-	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
-	{ MODKEY|ShiftMask,             XK_m,      setlayout,      {.v = &layouts[2]} },
-	//{ MODKEY|ShiftMask,             XK_s,      setlayout,      {0} },
+	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[1]} },
+	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[2]} },
+	//{ MODKEY|ShiftMask,             XK_m,      setlayout,      {0} },
 	{ MODKEY,                       XK_s,      togglefloating, {0} },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
 	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
@@ -121,7 +144,7 @@ static Key keys[] = {
 
 /* button definitions */
 /* click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle, ClkClientWin, or ClkRootWin */
-static Button buttons[] = {
+static const Button buttons[] = {
 	/* click                event mask      button          function        argument */
 	{ ClkLtSymbol,          0,              Button1,        setlayout,      {0} },
 	{ ClkLtSymbol,          0,              Button3,        setlayout,      {.v = &layouts[2]} },
